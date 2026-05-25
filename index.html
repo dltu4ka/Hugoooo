@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Онлайн Чат | Простое общение</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Контейнер чата */
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 85vh;
+            min-height: 500px;
+            background: #ffffff;
+            border-radius: 32px;
+            box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* Шапка чата */
+        .chat-header {
+            background: #1e293b;
+            padding: 18px 24px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .online-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 4px #22c55e;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; transform: scale(0.9);}
+            100% { opacity: 1; transform: scale(1.2);}
+        }
+
+        .chat-header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        }
+
+        .chat-header p {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-left: auto;
+        }
+
+        /* Область сообщений */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        /* Стили сообщений */
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+            animation: fadeInUp 0.2s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-own {
+            align-self: flex-end;
+        }
+
+        .message-other {
+            align-self: flex-start;
+        }
+
+        .message-bubble {
+            padding: 10px 16px;
+            border-radius: 24px;
+            word-break: break-word;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+
+        .message-own .message-bubble {
+            background: #3b82f6;
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        .message-other .message-bubble {
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            border-bottom-left-radius: 6px;
+        }
+
+        .message-info {
+            font-size: 0.7rem;
+            margin-top: 4px;
+            margin-left: 12px;
+            margin-right: 12px;
+            color: #64748b;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-own .message-info {
+            justify-content: flex-end;
+        }
+
+        .message-other .message-info {
+            justify-content: flex-start;
+        }
+
+        .message-author {
+            font-weight: 600;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
+        /* Системные сообщения */
+        .system-message {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #475569;
+            background: #eef2ff;
+            padding: 6px 12px;
+            border-radius: 30px;
+            width: fit-content;
+            max-width: 90%;
+            margin: 8px auto;
+            font-style: italic;
+        }
+
+        /* Панель ввода */
+        .input-area {
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 16px 24px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* строка имени и кнопки */
+        .user-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .name-input-wrapper {
+            flex: 2;
+            min-width: 140px;
+            position: relative;
+        }
+
+        .name-input-wrapper input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            font-size: 0.85rem;
+            transition: 0.2s;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .name-input-wrapper input:focus {
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+
+        /* Блок сообщения + отправка */
+        .message-compose {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .message-input-field {
+            flex: 1;
+            background: #f1f5f9;
+            border-radius: 28px;
+            border: 1px solid #cbd5e1;
+            transition: 0.2s;
+        }
+
+        .message-input-field textarea {
+            width: 100%;
+            padding: 12px 18px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: none;
+            outline: none;
+            border-radius: 28px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .message-input-field:focus-within {
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+
+        .send-btn {
+            background: #3b82f6;
+            border: none;
+            width: 46px;
+            height: 46px;
+            border-radius: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .send-btn:hover {
+            background: #2563eb;
+            transform: scale(0.96);
+        }
+
+        .send-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* дополнительная кнопка */
+        .clear-btn {
+            background: #94a3b8;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 32px;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .clear-btn:hover {
+            background: #64748b;
+        }
+
+        /* скролл кастом */
+        .messages-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-area::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .messages-area::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 550px) {
+            .chat-container {
+                height: 95vh;
+                border-radius: 24px;
+            }
+            .message {
+                max-width: 92%;
+            }
+            .input-area {
+                padding: 12px 16px 16px;
+            }
+        }
+
+        .emoji-hint {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-align: right;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <div class="online-status">
+            <div class="status-dot"></div>
+            <span>Чат онлайн</span>
+        </div>
+        <h1>💬 Глобальная беседа</h1>
+        <p>активен</p>
+    </div>
+
+    <div class="messages-area" id="messagesArea">
+        <div class="system-message">✨ Добро пожаловать! Введите имя и начните общение ✨</div>
+    </div>
+
+    <div class="input-area">
+        <div class="user-controls">
+            <div class="name-input-wrapper">
+                <input type="text" id="usernameInput" placeholder="Ваше имя (max 20 симв.)" maxlength="20" autocomplete="off">
+            </div>
+            <button class="clear-btn" id="clearChatBtn" title="Очистить историю чата">🗑 Очистить</button>
+        </div>
+
+        <div class="message-compose">
+            <div class="message-input-field">
+                <textarea id="messageInput" placeholder="Напишите сообщение..." rows="1" maxlength="500"></textarea>
+            </div>
+            <button class="send-btn" id="sendBtn">➤</button>
+        </div>
+        <div class="emoji-hint">📎 Enter — отправить, Shift+Enter — новая строка</div>
+    </div>
+</div>
+
+<script>
+    // ----- Управление состоянием чата -----
+    // Ключ для localStorage (сохраняем историю и имя)
+    const STORAGE_KEY = 'simple_online_chat_messages';
+    const USERNAME_KEY = 'chat_username_pref';
+
+    // Глобальный массив сообщений (каждый объект: id, author, text, timestamp, isSystem?)
+    let messages = [];
+
+    // DOM элементы
+    const messagesContainer = document.getElementById('messagesArea');
+    const usernameInput = document.getElementById('usernameInput');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendBtn');
+    const clearButton = document.getElementById('clearChatBtn');
+
+    // Вспомогательная функция: форматирование времени (часы:минуты)
+    function getFormattedTime() {
+        const now = new Date();
+        return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Получение текущего имени (если не заполнено -> "Гость")
+    function getCurrentUsername() {
+        let name = usernameInput.value.trim();
+        if (name === "") {
+            name = "Гость";
+        }
+        // защита от слишком длинных имен (max 20 уже стоит, но доп. проверка)
+        if (name.length > 20) name = name.slice(0, 20);
+        return name;
+    }
+
+    // Сохраняем имя пользователя в localStorage при изменении
+    function saveUsernameToLocalStorage() {
+        const currentName = usernameInput.value.trim();
+        if (currentName) {
+            localStorage.setItem(USERNAME_KEY, currentName);
+        } else {
+            // если пусто, удаляем запись (чтобы гость был по умолчанию)
+            localStorage.removeItem(USERNAME_KEY);
+        }
+    }
+
+    // Загружаем сохраненное имя при старте
+    function loadUsernameFromStorage() {
+        const savedName = localStorage.getItem(USERNAME_KEY);
+        if (savedName && savedName.trim() !== "") {
+            usernameInput.value = savedName.trim();
+        } else {
+            usernameInput.value = ""; // пустое поле, будет гость
+        }
+    }
+
+    // Сохраняем всю историю в localStorage
+    function saveMessagesToLocalStorage() {
+        try {
+            // сохраняем только не системные основные сообщения? сохраним все, включая системные (кроме приветствия которое динамическое? но приветствие не сохраняем)
+            // Чтобы при перезагрузке воссоздать среду – сохраним массив (кроме служебного welcome-сообщения, которое мы генерируем отдельно)
+            // но системные уведомления о подключении/очистке пусть сохраняются, это часть истории.
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        } catch(e) { console.warn("Ошибка сохранения", e); }
+    }
+
+    // Загружаем историю из localStorage
+    function loadMessagesFromStorage() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    messages = parsed;
+                } else {
+                    messages = [];
+                }
+            } catch(e) { messages = []; }
+        } else {
+            messages = [];
+        }
+        // Если история пустая, добавляем приветственное системное сообщение
+        if (messages.length === 0) {
+            addSystemMessage("💡 Чат готов к общению. Напишите что-нибудь!");
+        } else {
+            // Чтобы не дублировать вступительное системное сообщение, проверим - если последнее сообщение не системное приветствие, можно ничего не делать
+            // Но при загрузке всё отрисуется нормально.
+        }
+        renderMessages();
+    }
+
+    // Добавление системного сообщения (не от пользователя)
+    function addSystemMessage(text) {
+        const systemMsg = {
+            id: Date.now() + '-' + Math.random().toString(36).substr(2, 6),
+            author: 'system',
+            text: text,
+            timestamp: getFormattedTime(),
+            isSystem: true
+        };
+        messages.push(systemMsg);
+        saveMessagesToLocalStorage();
+        renderMessages();
+    }
+
+    // Добавление обычного сообщения от пользователя
+    function addUserMessage(author, text) {
+        if (!text || text.trim() === "") return false;
+        const cleanText = text.trim();
+        const newMessage = {
+            id: Date.now() + '-' + Math.random().toString(36).substr(2, 8),
+            author: author,
+            text: cleanText,
+            timestamp: getFormattedTime(),
+            isSystem: false
+        };
+        messages.push(newMessage);
+        saveMessagesToLocalStorage();
+        renderMessages();
+        return true;
+    }
+
+    // Очистка истории чата
+    function clearChatHistory() {
+        if (confirm("🗑 Очистить всю историю сообщений? Отменить будет нельзя.")) {
+            messages = [];
+            addSystemMessage("🧹 История чата очищена. Начните новый диалог!");
+            // дополнительно сохраняем очищенное
+            saveMessagesToLocalStorage();
+            renderMessages();
+        }
+    }
+
+    // Отрисовка сообщений
+    function renderMessages() {
+        if (!messagesContainer) return;
+        // Сохраняем скролл для авто-прокрутки вниз
+        const shouldScroll = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 50;
+
+        messagesContainer.innerHTML = '';
+
+        if (messages.length === 0) {
+            // Показываем нейтральное сообщение
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'system-message';
+            emptyDiv.innerText = '💬 Нет сообщений. Напишите первым!';
+            messagesContainer.appendChild(emptyDiv);
+        } else {
+            messages.forEach(msg => {
+                if (msg.isSystem) {
+                    const sysDiv = document.createElement('div');
+                    sysDiv.className = 'system-message';
+                    sysDiv.innerText = `📢 ${msg.text}`;
+                    messagesContainer.appendChild(sysDiv);
+                } else {
+                    const isOwn = (msg.author === getCurrentUsername());
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${isOwn ? 'message-own' : 'message-other'}`;
+
+                    const bubbleDiv = document.createElement('div');
+                    bubbleDiv.className = 'message-bubble';
+                    bubbleDiv.innerText = msg.text;
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'message-info';
+                    const authorSpan = document.createElement('span');
+                    authorSpan.className = 'message-author';
+                    authorSpan.innerText = msg.author;
+                    const timeSpan = document.createElement('span');
+                    timeSpan.className = 'message-time';
+                    timeSpan.innerText = msg.timestamp;
+
+                    infoDiv.appendChild(authorSpan);
+                    infoDiv.appendChild(timeSpan);
+
+                    messageDiv.appendChild(bubbleDiv);
+                    messageDiv.appendChild(infoDiv);
+                    messagesContainer.appendChild(messageDiv);
+                }
+            });
+        }
+
+        // Прокрутка вниз, если нужно
+        if (shouldScroll) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        } else {
+            // если сообщение новое или пользователь уже внизу, всё равно проматываем
+            // но для плавности - всегда отправляем вниз, если сообщение было отправлено из активного ввода
+            // однако для лучшего UX: если пользователь прокрутил вверх и не отправлял, не сбиваем.
+            // но для простоты, при отправке будет отдельно прокрутка. Здесь же для загрузки сохраняем поведение
+            // только если старые сообщения подгрузились и скролл был внизу - оставляем внизу
+            if (messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 80) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+    }
+
+    // Функция отправки сообщения (основная логика)
+    function sendMessage() {
+        let text = messageInput.value;
+        if (!text || text.trim() === "") return;
+
+        const author = getCurrentUsername();
+        // Добавляем сообщение
+        const success = addUserMessage(author, text);
+        if (success) {
+            messageInput.value = ""; // очищаем поле
+            // Адаптивная высота textarea сброшена
+            resetTextareaHeight();
+            // Прокручиваем вниз после рендера
+            setTimeout(() => {
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }, 30);
+            messageInput.focus();
+        }
+    }
+
+    // Изменение высоты textarea динамически (удобство)
+    function autoResizeTextarea() {
+        const textarea = messageInput;
+        textarea.style.height = 'auto';
+        let newHeight = Math.min(textarea.scrollHeight, 100);
+        textarea.style.height = newHeight + 'px';
+    }
+
+    function resetTextareaHeight() {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = '44px'; // базовый комфорт
+    }
+
+    // Обработчик нажатия Enter в поле ввода (без Shift)
+    function onMessageKeydown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        } else if (e.key === 'Enter' && e.shiftKey) {
+            // разрешаем перенос строки, ничего не делаем
+            setTimeout(autoResizeTextarea, 5);
+        } else {
+            setTimeout(autoResizeTextarea, 5);
+        }
+    }
+
+    // При изменении имени - перерисовываем сообщения, чтобы стили (свои/чужие) обновились
+    function onUsernameChange() {
+        saveUsernameToLocalStorage();
+        renderMessages(); // обновит классы "свои" для всех сообщений в соответствии с новым именем
+    }
+
+    // Дополнительно, если юзер удалит имя и станет гостем - корректно
+    function setupEventListeners() {
+        sendButton.addEventListener('click', sendMessage);
+        clearButton.addEventListener('click', clearChatHistory);
+        usernameInput.addEventListener('change', onUsernameChange);
+        usernameInput.addEventListener('input', function() {
+            // в процессе ввода не перерисовываем постоянно, но при потере фокуса сохраняем
+            saveUsernameToLocalStorage();
+        });
+        usernameInput.addEventListener('blur', function() {
+            onUsernameChange(); // при потере фокуса перерисовываем для корректной смены меток "своё"
+        });
+
+        messageInput.addEventListener('keydown', onMessageKeydown);
+        messageInput.addEventListener('input', autoResizeTextarea);
+        // начальный размер
+        resetTextareaHeight();
+    }
+
+    // Инициализация чата, проверка пустых локальных данных
+    function initChat() {
+        loadUsernameFromStorage();
+        loadMessagesFromStorage();
+        setupEventListeners();
+        // фокус на поле ввода
+        messageInput.focus();
+        // Автоматически скорректировать скролл после полной загрузки
+        setTimeout(() => {
+            if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }, 100);
+        // Добавляем "приветствие" если чат только что запущен и нет абсолютно никаких сообщений (но loadMessages добавит если надо)
+        // Проверка: если массив сообщений содержит только системное приветствие или пусто - добавим дружелюбное
+        if (messages.length === 1 && messages[0].isSystem && messages[0].text.includes("Чат готов")) {
+            // ничего не делаем, уже норм
+        } else if (messages.length === 0) {
+            addSystemMessage("👋 Привет! Используйте поле внизу для общения.");
+        }
+    }
+
+    // Запускаем приложение
+    initChat();
+</script>
+</body>
+</html>
